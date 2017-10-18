@@ -12,12 +12,15 @@ class ChatServer {
         while (true) {
             System.out.println("Begin");
             Socket conSocket = welcomeSocket.accept();
+
             BufferedReader inFromClient = new
                     BufferedReader(new
                     InputStreamReader(
                     conSocket.getInputStream()));
+
             DataOutputStream outToClient = new
                     DataOutputStream(conSocket.getOutputStream());
+
             clientSentence = inFromClient.readLine();
             capitalisedSentence = clientSentence.toUpperCase() + '\n';
             outToClient.writeBytes(capitalisedSentence);
