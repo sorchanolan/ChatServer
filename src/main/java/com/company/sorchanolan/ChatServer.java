@@ -4,7 +4,7 @@ import org.json.*;
 
 import java.io.*;
 import java.net.*;
-import java.util.Optional;
+import java.util.*;
 
 class ChatServer {
   private static int PORT = 6789;
@@ -12,9 +12,12 @@ class ChatServer {
 
   public static void main(String argv[]) throws Exception {
     ServerSocket welcomeSocket = new ServerSocket(PORT);
+    List<Client> clients = new ArrayList<>();
+    List<Chatroom> chatrooms = new ArrayList<>();
+    Map<Integer, String> joinIdToClientName = new HashMap<>();
 
     while (true) {
-      System.out.println("Begin Client Comms");
+      System.out.println("Begin Comms");
       Socket conSocket = welcomeSocket.accept();
 
       BufferedReader inFromClient = new
