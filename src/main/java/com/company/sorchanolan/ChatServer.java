@@ -5,7 +5,6 @@ import org.json.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 class ChatServer {
   private static int PORT = 6789;
@@ -27,7 +26,10 @@ class ChatServer {
       String clientMessage = inFromClient.readLine();
       System.out.println(clientMessage);
 
+      MessageType messageType = checkMessageType(clientMessage);
+      
       JoinRequest joinRequest = getJoinRequest(clientMessage);
+
 
       Client client = new Client(joinRequest.getClientName());
       if (!clients.contains(client)) {
@@ -83,5 +85,18 @@ class ChatServer {
       }
 
       return joinRequest;
+    }
+
+    private static MessageType checkMessageType(String input) {
+      JSONObject jsonObject = new JSONObject(input);
+      if (jsonObject.has("JOIN_CHATROOM")) {
+        return MessageType.JOIN;
+      } else if (jsonObject.has("LEAVE_CHATROOM")) {
+        return MessageType.LEAVE;
+      } else if (jsonObject.has("CHAT")) {
+        return MessageType.MESSAGE;
+      } else if (jsonObject.has("DISCONNECT")) {
+        return MessageType.DISCONNECT;
+      } else return MessageType.ERROR;
     }
 }
