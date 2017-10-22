@@ -27,8 +27,20 @@ class ChatServer {
       System.out.println(clientMessage);
 
       MessageType messageType = checkMessageType(clientMessage);
-      
+
       JoinRequest joinRequest = getJoinRequest(clientMessage);
+      if (messageType.equals(MessageType.LEAVE)) {
+        ClientJoinInstance clientJoinInstance = getClientJoinInstance(clientMessage);
+        Optional<Chatroom> maybeChatroom = chatrooms.stream()
+            .filter(chatroom -> chatroom.getRoomRef() == clientJoinInstance.getRoomRef())
+            .findFirst();
+
+        if (maybeChatroom.isPresent()) {
+          maybeChatroom.get().removeClient(clientJoinInstance.getJoinId());
+        } else {
+          System.out.println("No room reference found.");
+        }
+      }
 
 
       Client client = new Client(joinRequest.getClientName());
@@ -71,32 +83,48 @@ class ChatServer {
         .put("PORT", PORT)
         .put("ROOM_REF", createID())
         .put("JOIN_ID", joinId);
+  }
+
+  private static JoinRequest getJoinRequest(String input) {
+  JoinRequest joinRequest = new JoinRequest();
+
+    try {
+      JSONObject json = new JSONObject(input);
+      joinRequest.setChatroomName(json.getString("CHATROOM_NAME"));
+      joinRequest.setClientName(json.getString("CLIENT_NAME"));
+    } catch (Exception e) {
+      System.out.println("Could not convert to JSON: " + e.getMessage());
     }
 
-    private static JoinRequest getJoinRequest(String input) {
-    JoinRequest joinRequest = new JoinRequest();
+    return joinRequest;
+  }
 
-      try {
-        JSONObject json = new JSONObject(input);
-        joinRequest.setChatroomName(json.getString("CHATROOM_NAME"));
-        joinRequest.setClientName(json.getString("CLIENT_NAME"));
-      } catch (Exception e) {
-        System.out.println("Could not convert to JSON: " + e.getMessage());
-      }
+  private static ClientJoinInstance getClientJoinInstance(String input) {
+    ClientJoinInstance clientJoinInstance = new ClientJoinInstance();
 
-      return joinRequest;
+    try {
+      JSONObject json = new JSONObject(input);
+      Client client = new Client(json.getString("CLIENT_NAME"));
+      clientJoinInstance.setClient(client);
+      clientJoinInstance.setJoinId(json.getInt("JOIN_ID"));
+      clientJoinInstance.setRoomRef(json.getInt("ROOM_REF"));
+    } catch (Exception e) {
+      System.out.println("Could not convert to JSON: " + e.getMessage());
     }
 
-    private static MessageType checkMessageType(String input) {
-      JSONObject jsonObject = new JSONObject(input);
-      if (jsonObject.has("JOIN_CHATROOM")) {
-        return MessageType.JOIN;
-      } else if (jsonObject.has("LEAVE_CHATROOM")) {
-        return MessageType.LEAVE;
-      } else if (jsonObject.has("CHAT")) {
-        return MessageType.MESSAGE;
-      } else if (jsonObject.has("DISCONNECT")) {
-        return MessageType.DISCONNECT;
-      } else return MessageType.ERROR;
-    }
+    return clientJoinInstance;
+  }
+
+  private static MessageType checkMessageType(String input) {
+    JSONObject jsonObject = new JSONObject(input);
+    if (jsonObject.has("JOIN_CHATROOM")) {
+      return MessageType.JOIN;
+    } else if (jsonObject.has("LEAVE_CHATROOM")) {
+      return MessageType.LEAVE;
+    } else if (jsonObject.has("CHAT")) {
+      return MessageType.MESSAGE;
+    } else if (jsonObject.has("DISCONNECT")) {
+      return MessageType.DISCONNECT;
+    } else return MessageType.ERROR;
+  }
 }
