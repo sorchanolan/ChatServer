@@ -18,6 +18,7 @@ class ChatServer {
 
     while (true) {
       System.out.println("Begin Comms");
+
       Socket conSocket = welcomeSocket.accept();
 
       BufferedReader inFromClient = new BufferedReader(new InputStreamReader(conSocket.getInputStream()));
@@ -42,7 +43,6 @@ class ChatServer {
         }
       }
 
-
       Client client = new Client(joinRequest.getClientName());
       if (!clients.contains(client)) {
         clients.add(client);
@@ -60,7 +60,7 @@ class ChatServer {
         chatroom.setIpAddress("");
         chatroom.addClient(clientNameToJoinId.get(client.getName()));
         chatrooms.add(chatroom);
-        System.out.println("Chatroom " + chatroom.getName() + "added");
+        System.out.println("Chatroom " + chatroom.getName() + " added");
       } else {
         maybeChatroom.get().addClient(clientNameToJoinId.get(client.getName()));
         System.out.println("Client " + client.getName() + " added to chatroom " + maybeChatroom.get().getName());
@@ -90,7 +90,7 @@ class ChatServer {
 
     try {
       JSONObject json = new JSONObject(input);
-      joinRequest.setChatroomName(json.getString("CHATROOM_NAME"));
+      joinRequest.setChatroomName(json.getString("JOIN_CHATROOM"));
       joinRequest.setClientName(json.getString("CLIENT_NAME"));
     } catch (Exception e) {
       System.out.println("Could not convert to JSON: " + e.getMessage());

@@ -11,6 +11,12 @@ public class ClientJoinInstance {
     this.roomRef = -1;
   }
 
+  public ClientJoinInstance(Client client, int joinId, int roomRef) {
+    this.client = client;
+    this.joinId = joinId;
+    this.roomRef = roomRef;
+  }
+
   public Client getClient() {
     return client;
   }
