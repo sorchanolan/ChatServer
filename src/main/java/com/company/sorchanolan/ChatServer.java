@@ -6,10 +6,11 @@ import java.util.*;
 
 class ChatServer implements Runnable {
   private static int PORT = 6789;
+  private static String IP_ADDRESS = "";
   private Thread thread = null;
   private ServerSocket welcomeSocket = null;
   private ChatServerThread client = null;
-  public List<Client> clients = new ArrayList<>();
+  public List<String> clientNames = new ArrayList<>();
   public List<Chatroom> chatrooms = new ArrayList<>();
   public Map<String, Integer> clientNameToJoinId = new HashMap<>();
 

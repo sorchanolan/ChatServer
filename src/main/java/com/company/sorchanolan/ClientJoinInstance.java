@@ -1,24 +1,24 @@
 package com.company.sorchanolan;
 
 public class ClientJoinInstance {
-  private Client client;
+  private String clientName;
   private int joinId;
   private int roomRef;
 
   public ClientJoinInstance() {
-    this.client = new Client();
+    this.clientName = "";
     this.joinId = -1;
     this.roomRef = -1;
   }
 
-  public ClientJoinInstance(Client client, int joinId, int roomRef) {
-    this.client = client;
+  public ClientJoinInstance(String clientName, int joinId, int roomRef) {
+    this.clientName = clientName;
     this.joinId = joinId;
     this.roomRef = roomRef;
   }
 
-  public Client getClient() {
-    return client;
+  public String getClientName() {
+    return clientName;
   }
 
   public int getJoinId() {
@@ -29,8 +29,8 @@ public class ClientJoinInstance {
     return roomRef;
   }
 
-  public void setClient(Client client) {
-    this.client = client;
+  public void setClientName(String clientName) {
+    this.clientName = clientName;
   }
 
   public void setJoinId(int joinId) {
