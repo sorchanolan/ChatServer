@@ -22,73 +22,85 @@ public class ChatServerThread extends Thread {
 
   public void run() {
     System.out.println("Server Thread " + PORT + " running.");
+    System.out.println("Begin Comms");
+    openComms();
+    String response = "";
 
     while (true) {
-      System.out.println("Begin Comms");
-      openComms();
-
-      String clientMessage = inFromClient.readLine();
-      System.out.println(clientMessage);
-
-      MessageType messageType = checkMessageType(clientMessage);
-
-      JoinRequest joinRequest = getJoinRequest(clientMessage);
-      if (messageType.equals(MessageType.LEAVE)) {
-        ClientJoinInstance clientJoinInstance = getClientJoinInstance(clientMessage);
-        Optional<Chatroom> maybeChatroom = server.chatrooms.stream()
-            .filter(chatroom -> chatroom.getRoomRef() == clientJoinInstance.getRoomRef())
-            .findFirst();
-
-        if (maybeChatroom.isPresent()) {
-          maybeChatroom.get().removeClient(clientJoinInstance.getJoinId());
-        } else {
-          System.out.println("No room reference found.");
-        }
+      try {
+        String clientMessage = inFromClient.readLine();
+        System.out.println(clientMessage);
+        response = processRequest(clientMessage);
+      } catch (IOException e) {
+        System.out.println(e);
       }
 
-      Client client = new Client(joinRequest.getClientName());
-      if (!server.clients.contains(client)) {
-        server.clients.add(client);
-        server.clientNameToJoinId.put(client.getName(), createID());
-      } else {
-        System.out.println("Client " + client.getName() + " already in chat system");
+      System.out.println(response);
+      try {
+        outToClient.writeBytes(response + "\n");
+      } catch (IOException e) {
+        System.out.println(e);
       }
-
-      Optional<Chatroom> maybeChatroom = server.chatrooms.stream().filter(chatroom -> chatroom.getName().equals(joinRequest.getChatroomName())).findFirst();
-      if (!maybeChatroom.isPresent()) {
-        Chatroom chatroom = new Chatroom();
-        chatroom.setName(joinRequest.getChatroomName());
-        chatroom.setRoomRef(createID());
-        chatroom.setPort(PORT + 1);
-        chatroom.setIpAddress("");
-        chatroom.addClient(server.clientNameToJoinId.get(client.getName()));
-        server.chatrooms.add(chatroom);
-        System.out.println("Chatroom " + chatroom.getName() + " added");
-      } else {
-        maybeChatroom.get().addClient(server.clientNameToJoinId.get(client.getName()));
-        System.out.println("Client " + client.getName() + " added to chatroom " + maybeChatroom.get().getName());
-      }
-
-      String joinResponse = createJoinResponse(joinRequest.getChatroomName(), server.clientNameToJoinId.get(client.getName()).toString()).toString();
-      System.out.println(joinResponse);
-      outToClient.writeBytes(joinResponse + "\n");
     }
   }
 
   private void openComms() {
     try {
-      BufferedReader inFromClient = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-      DataOutputStream outToClient = new DataOutputStream(socket.getOutputStream());
+      inFromClient = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+      outToClient = new DataOutputStream(socket.getOutputStream());
     } catch (IOException e) {
       System.out.println(e);
     }
   }
 
+  private String processRequest(String clientMessage) {
+    MessageType messageType = checkMessageType(clientMessage);
+
+    JoinRequest joinRequest = getJoinRequest(clientMessage);
+    if (messageType.equals(MessageType.LEAVE)) {
+      ClientJoinInstance clientJoinInstance = getClientJoinInstance(clientMessage);
+      Optional<Chatroom> maybeChatroom = server.chatrooms.stream()
+          .filter(chatroom -> chatroom.getRoomRef() == clientJoinInstance.getRoomRef())
+          .findFirst();
+
+      if (maybeChatroom.isPresent()) {
+        maybeChatroom.get().removeClient(clientJoinInstance.getJoinId());
+      } else {
+        System.out.println("No room reference found.");
+      }
+    }
+
+    Client client = new Client(joinRequest.getClientName());
+    if (!server.clients.contains(client)) {
+      server.clients.add(client);
+      server.clientNameToJoinId.put(client.getName(), createID());
+    } else {
+      System.out.println("Client " + client.getName() + " already in chat system");
+    }
+
+    Optional<Chatroom> maybeChatroom = server.chatrooms.stream().filter(chatroom -> chatroom.getName().equals(joinRequest.getChatroomName())).findFirst();
+    if (!maybeChatroom.isPresent()) {
+      Chatroom chatroom = new Chatroom();
+      chatroom.setName(joinRequest.getChatroomName());
+      chatroom.setRoomRef(createID());
+      chatroom.setPort(PORT + 1);
+      chatroom.setIpAddress("");
+      chatroom.addClient(server.clientNameToJoinId.get(client.getName()));
+      server.chatrooms.add(chatroom);
+      System.out.println("Chatroom " + chatroom.getName() + " added");
+    } else {
+      maybeChatroom.get().addClient(server.clientNameToJoinId.get(client.getName()));
+      System.out.println("Client " + client.getName() + " added to chatroom " + maybeChatroom.get().getName());
+    }
+
+    return createJoinResponse(joinRequest.getChatroomName(), server.clientNameToJoinId.get(client.getName()).toString()).toString();
+  }
+
   public void close() throws IOException {
     if (socket != null)
       socket.close();
-    if (streamIn != null)
-      streamIn.close();
+    if (inFromClient != null)
+      inFromClient.close();
   }
 
   private synchronized int createID() {

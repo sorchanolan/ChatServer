@@ -15,7 +15,7 @@ class ChatServer implements Runnable {
 
   public ChatServer(int port) {
     try {
-      welcomeSocket = new ServerSocket(PORT);
+      welcomeSocket = new ServerSocket(port);
     } catch (IOException e) {
       System.out.println(e);
     }
@@ -37,6 +37,7 @@ class ChatServer implements Runnable {
       try {
         Socket conSocket = welcomeSocket.accept();
         client = new ChatServerThread(this, conSocket);
+        client.start();
       } catch (IOException e) {
         System.out.println(e);
       }
