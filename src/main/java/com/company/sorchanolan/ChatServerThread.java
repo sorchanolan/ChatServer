@@ -4,7 +4,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,7 +69,7 @@ public class ChatServerThread extends Thread implements Runnable {
     } else if (requestMessage.has("LEAVE_CHATROOM")) {
       return  processLeaveRequest(requestMessage);
     } else if (requestMessage.has("CHAT")) {
-      return  "";
+      return  processChatMessage(requestMessage);
     } else if (requestMessage.has("DISCONNECT")) {
       return "";
     } else return getErrorMessage(3, "No applicable message request type found. Please retry with an allowed request.");
@@ -107,7 +106,7 @@ public class ChatServerThread extends Thread implements Runnable {
           .findFirst();
 
       if (maybeChatroom.isPresent()) {
-        maybeChatroom.get().removeClient(joinId);
+        maybeChatroom.get().removeClientSocket(socket);
         return new JSONObject()
             .put("LEFT_CHATROOM", roomRef)
             .put("JOIN_ID", joinId)
@@ -136,7 +135,7 @@ public class ChatServerThread extends Thread implements Runnable {
       server.clientNames.add(clientName);
     } else {
       System.out.println("Client " + clientName + " already in chat system");
-      return getErrorMessage(2, "Someone with your handle is already in the system. Please rejoin with another handle.");
+      //return getErrorMessage(2, "Someone with your handle is already in the system. Please rejoin with another handle.");
     }
 
     int joinId = createID();
@@ -153,11 +152,11 @@ public class ChatServerThread extends Thread implements Runnable {
       chatroom.setRoomRef(roomRef);
       chatroom.setPort(PORT);
       chatroom.setIpAddress("localhost");
-      chatroom.addClient(joinId);
+      chatroom.addClientSocket(socket);
       server.chatrooms.add(chatroom);
       System.out.println("Chatroom " + chatroom.getName() + " added");
     } else {
-      maybeChatroom.get().addClient(joinId);
+      maybeChatroom.get().addClientSocket(socket);
       roomRef = maybeChatroom.get().getRoomRef();
     }
 
@@ -171,6 +170,44 @@ public class ChatServerThread extends Thread implements Runnable {
         .put("ROOM_REF", roomRef)
         .put("JOIN_ID", joinId)
         .toString();
+  }
+
+  private String processChatMessage(JSONObject chatMessage) {
+    int roomRef, joinId;
+    String message;
+    try {
+      clientName = chatMessage.getString("CLIENT_NAME");
+      roomRef = chatMessage.getInt("CHAT");
+      joinId = chatMessage.getInt("JOIN_ID");
+      message = chatMessage.getString("MESSAGE");
+    } catch (JSONException e) {
+      System.out.println("Unable to process message request, invalid message: " + e);
+      return getErrorMessage(5, "Invalid chat message request. Please retry.");
+    }
+
+    JSONObject chatMessageResponse = new JSONObject()
+        .put("CHAT", roomRef)
+        .put("CLIENT_NAME", clientName)
+        .put("MESSAGE", message);
+
+    Optional<Chatroom> maybeChatroom = server.chatrooms.stream()
+        .filter(chatroom -> chatroom.getRoomRef() == roomRef)
+        .findFirst();
+
+    if (maybeChatroom.isPresent()) {
+      Chatroom chatroom = maybeChatroom.get();
+
+      for (Socket clientSocketInChatroom : chatroom.getClientSockets()) {
+        try {
+          outToClient = new DataOutputStream(clientSocketInChatroom.getOutputStream());
+          outToClient.writeBytes(chatMessageResponse.toString());
+        } catch (IOException e) {
+          System.out.println("Could not connect to socket: " + e);
+        }
+      }
+    }
+
+    return chatMessageResponse.toString();
   }
 
   private String getErrorMessage(int errorCode, String errorMessage) {

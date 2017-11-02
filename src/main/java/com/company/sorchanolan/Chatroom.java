@@ -1,5 +1,6 @@
 package com.company.sorchanolan;
 
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,7 +12,7 @@ public class Chatroom {
   private int port;
   private int roomRef;
   private Map<Integer, String> messages;
-  private List<Integer> clients;
+  private List<Socket> clientSockets;
 
   public Chatroom() {
     this.name = "";
@@ -19,7 +20,7 @@ public class Chatroom {
     this.port = -1;
     this.roomRef = -1;
     this.messages = new HashMap<>();
-    this.clients = new ArrayList<>();
+    this.clientSockets = new ArrayList<>();
   }
 
   //Getters
@@ -40,8 +41,8 @@ public class Chatroom {
     return roomRef;
   }
 
-  public List<Integer> getClients() {
-    return clients;
+  public List<Socket> getClientSockets() {
+    return clientSockets;
   }
 
   public Map<Integer, String> getMessages() {
@@ -54,8 +55,8 @@ public class Chatroom {
     this.name = name;
   }
 
-  public void setClients(List<Integer> clients) {
-    this.clients = clients;
+  public void setClientSockets(List<Socket> clientSockets) {
+    this.clientSockets = clientSockets;
   }
 
   public void setIpAddress(String ipAddress) {
@@ -78,11 +79,11 @@ public class Chatroom {
     messages.put(joinId, message);
   }
 
-  public void addClient(int joinId) {
-    clients.add(joinId);
+  public void addClientSocket(Socket socket) {
+    clientSockets.add(socket);
   }
 
-  public boolean removeClient(int joinId) {
-    return clients.remove(Integer.valueOf(joinId));
+  public boolean removeClientSocket(Socket socket) {
+    return clientSockets.remove(socket);
   }
 }
