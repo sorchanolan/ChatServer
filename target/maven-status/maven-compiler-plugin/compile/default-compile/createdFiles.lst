@@ -1,6 +1,4 @@
+com/company/sorchanolan/ChatServerThread.class
 com/company/sorchanolan/ClientJoinInstance.class
-com/company/sorchanolan/MessageType.class
 com/company/sorchanolan/ChatServer.class
-com/company/sorchanolan/Client.class
 com/company/sorchanolan/Chatroom.class
-com/company/sorchanolan/JoinRequest.class

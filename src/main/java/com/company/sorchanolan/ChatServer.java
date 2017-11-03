@@ -6,15 +6,15 @@ import java.util.*;
 
 class ChatServer implements Runnable {
   private static int PORT = 6789;
-  private static String IP_ADDRESS = "";
   private Thread thread = null;
   private ServerSocket welcomeSocket = null;
   private ChatServerThread client = null;
-  public List<String> clientNames = new ArrayList<>();
-  public List<Chatroom> chatrooms = new ArrayList<>();
-  public Map<String, Integer> clientNameToJoinId = new HashMap<>();
+  public List<String> clientNames = Collections.synchronizedList(new ArrayList<String>());
+  public List<Chatroom> chatrooms = Collections.synchronizedList(new ArrayList<Chatroom>());
+  private int idCounter = 1;
 
   public ChatServer(int port) {
+    System.out.println("Begin Comms");
     try {
       welcomeSocket = new ServerSocket(port);
     } catch (IOException e) {
@@ -43,5 +43,9 @@ class ChatServer implements Runnable {
         System.out.println(e);
       }
     }
+  }
+
+  public synchronized int createID() {
+    return idCounter++;
   }
 }
