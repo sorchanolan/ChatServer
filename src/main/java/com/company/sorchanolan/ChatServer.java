@@ -12,8 +12,6 @@ class ChatServer implements Runnable {
   private ChatServerThread client = null;
   public List<String> clientNames = Collections.synchronizedList(new ArrayList<String>());
   public List<Chatroom> chatrooms = Collections.synchronizedList(new ArrayList<Chatroom>());
-  public List<Integer> joinIds = Collections.synchronizedList(new ArrayList<Integer>());
-  public List<Integer> roomRefs = Collections.synchronizedList(new ArrayList<Integer>());
   private int idCounter = 1;
 
   public ChatServer(int port) {

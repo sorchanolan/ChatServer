@@ -28,20 +28,12 @@ public class ChatServerThread extends Thread implements Runnable {
     System.out.println("Server Thread " + PORT + " running.");
     System.out.println("Begin Comms");
     openComms();
-    String response = "";
 
     while (true) {
       try {
         String clientMessage = inFromClient.readLine();
         System.out.println(clientMessage);
-        response = processRequest(clientMessage);
-      } catch (IOException e) {
-        System.out.println(e);
-      }
-
-      System.out.println(response);
-      try {
-        outToClient.writeBytes(response + "\n");
+        processRequest(clientMessage);
       } catch (IOException e) {
         System.out.println(e);
       }
@@ -57,21 +49,17 @@ public class ChatServerThread extends Thread implements Runnable {
     }
   }
 
-  private String processRequest(String clientMessage) {
-    return getResponse(clientMessage);
-  }
-
-  private String getResponse(String clientMessage) {
+  private void processRequest(String clientMessage) {
     JSONObject requestMessage = new JSONObject(clientMessage);
     if (requestMessage.has("JOIN_CHATROOM")) {
-      return processJoinRequest(requestMessage);
+      processJoinRequest(requestMessage);
     } else if (requestMessage.has("LEAVE_CHATROOM")) {
-      return  processLeaveRequest(requestMessage);
+      processLeaveRequest(requestMessage);
     } else if (requestMessage.has("CHAT")) {
-      return  processChatMessage(requestMessage);
+      processChatMessage(requestMessage);
     } else if (requestMessage.has("DISCONNECT")) {
-      return "";
-    } else return getErrorMessage(3, "No applicable message request type found. Please retry with an allowed request.");
+      processDisconnectRequest(requestMessage);
+    } else sendErrorMessage(3, "No applicable message request type found. Please retry with an allowed request.");
   }
 
   public void close() throws IOException {
@@ -81,14 +69,39 @@ public class ChatServerThread extends Thread implements Runnable {
       inFromClient.close();
   }
 
-  private String processLeaveRequest(JSONObject leaveRequestMessage) {
+  private void processDisconnectRequest(JSONObject disconnectRequest) {
+    String clientNameToDisconnect = "";
+    try {
+      clientNameToDisconnect = disconnectRequest.getString("CLIENT_NAME");
+    } catch (JSONException e) {
+      System.out.println("Unable to process disconnect request, invalid message: " + e);
+      sendErrorMessage(6, "Invalid disconnect request message. Please retry.");
+      return;
+    }
+
+    if (!clientNameToDisconnect.equals(clientName)) {
+      sendErrorMessage(6, "Incorrect client name to disconnect. Please retry.");
+      return;
+    }
+
+    try {
+      close();
+    } catch (IOException e) {
+      System.out.println("Could not properly close connection: " + e);
+    }
+
+  }
+
+  private void processLeaveRequest(JSONObject leaveRequestMessage) {
+    String response;
     int roomRef, joinId;
     try {
       roomRef = leaveRequestMessage.getInt("LEAVE_CHATROOM");
       joinId = leaveRequestMessage.getInt("JOIN_ID");
     } catch (JSONException e) {
       System.out.println("Unable to process leave request, invalid message: " + e);
-      return getErrorMessage(1, "Invalid leave request message. Please retry.");
+      sendErrorMessage(1, "Invalid leave request message. Please retry.");
+      return;
     }
 
     Optional<ClientJoinInstance> maybeClientJoinInstance = clientJoinInstances.stream()
@@ -105,28 +118,38 @@ public class ChatServerThread extends Thread implements Runnable {
 
       if (maybeChatroom.isPresent()) {
         maybeChatroom.get().removeClientSocket(socket);
-        return new JSONObject()
+        response = new JSONObject()
             .put("LEFT_CHATROOM", roomRef)
             .put("JOIN_ID", joinId)
             .toString();
       } else {
         System.out.println("No chatroom with this reference found.");
-        return getErrorMessage(5, "No chatroom with this reference found.");
+        sendErrorMessage(5, "No chatroom with this reference found.");
+        return;
       }
     } else {
       System.out.println("Unable to process leave request, client is not currently in chatroom " + roomRef);
-      return getErrorMessage(4, "You are not currently in chatroom " + roomRef + " and therefore cannot leave it.");
+      sendErrorMessage(4, "You are not currently in chatroom " + roomRef + " and therefore cannot leave it.");
+      return;
+    }
+
+    System.out.println(response);
+    try {
+      outToClient.writeBytes(response + "\n");
+    } catch (IOException e) {
+      System.out.println(e);
     }
   }
 
-  private String processJoinRequest(JSONObject joinRequestMessage) {
-    String chatroomName;
+  private void processJoinRequest(JSONObject joinRequestMessage) {
+    String chatroomName, response;
     try {
       clientName = joinRequestMessage.getString("CLIENT_NAME");
       chatroomName = joinRequestMessage.getString("JOIN_CHATROOM");
     } catch (JSONException e) {
       System.out.println("Unable to process join request, invalid message: " + e);
-      return getErrorMessage(1, "Invalid join request message. Please retry.");
+      sendErrorMessage(1, "Invalid join request message. Please retry.");
+      return;
     }
 
     synchronized (server.clientNames) {
@@ -162,16 +185,23 @@ public class ChatServerThread extends Thread implements Runnable {
     clientJoinInstances.add(new ClientJoinInstance(clientName, joinId, roomRef));
     System.out.println("Client " + clientName + " added to chatroom " + chatroomName);
 
-    return new JSONObject()
+    response = new JSONObject()
         .put("JOINED_CHATROOM", chatroomName)
         .put("SERVER_IP", "localhost")
         .put("PORT", PORT)
         .put("ROOM_REF", roomRef)
         .put("JOIN_ID", joinId)
         .toString();
+
+    System.out.println(response);
+    try {
+      outToClient.writeBytes(response + "\n");
+    } catch (IOException e) {
+      System.out.println(e);
+    }
   }
 
-  private String processChatMessage(JSONObject chatMessage) {
+  private void processChatMessage(JSONObject chatMessage) {
     int roomRef, joinId;
     String message;
     try {
@@ -181,7 +211,8 @@ public class ChatServerThread extends Thread implements Runnable {
       message = chatMessage.getString("MESSAGE");
     } catch (JSONException e) {
       System.out.println("Unable to process message request, invalid message: " + e);
-      return getErrorMessage(5, "Invalid chat message request. Please retry.");
+      sendErrorMessage(5, "Invalid chat message request. Please retry.");
+      return;
     }
 
     JSONObject chatMessageResponse = new JSONObject()
@@ -208,14 +239,19 @@ public class ChatServerThread extends Thread implements Runnable {
         }
       }
     }
-
-    return chatMessageResponse.toString();
   }
 
-  private String getErrorMessage(int errorCode, String errorMessage) {
-    return new JSONObject()
+  private void sendErrorMessage(int errorCode, String errorMessage) {
+    String errorResponse = new JSONObject()
         .put("ERROR_CODE", errorCode)
         .put("ERROR_MESSAGE", errorMessage)
         .toString();
+    System.out.println(errorResponse);
+
+    try {
+      outToClient.writeBytes(errorResponse + "\n");
+    } catch (IOException ie) {
+      System.out.println(ie);
+    }
   }
 }
