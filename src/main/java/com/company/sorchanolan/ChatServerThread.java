@@ -15,7 +15,6 @@ public class ChatServerThread extends Thread implements Runnable {
   private int PORT = -1;
   private BufferedReader inFromClient = null;
   private DataOutputStream outToClient = null;
-  private int idCounter = 1;
   private List<ClientJoinInstance> clientJoinInstances = new ArrayList<>();
   private String clientName = null;
 
@@ -82,10 +81,6 @@ public class ChatServerThread extends Thread implements Runnable {
       inFromClient.close();
   }
 
-  private synchronized int createID() {
-    return idCounter++;
-  }
-
   private String processLeaveRequest(JSONObject leaveRequestMessage) {
     int roomRef, joinId;
     try {
@@ -100,10 +95,13 @@ public class ChatServerThread extends Thread implements Runnable {
         .filter(clientJoin -> clientJoin.getJoinId() == joinId)
         .findFirst();
 
+    Optional<Chatroom> maybeChatroom;
     if (maybeClientJoinInstance.isPresent()) {
-      Optional<Chatroom> maybeChatroom = server.chatrooms.stream()
+      synchronized(server.chatrooms) {
+       maybeChatroom = server.chatrooms.stream()
           .filter(chatroom -> chatroom.getRoomRef() == roomRef)
           .findFirst();
+      }
 
       if (maybeChatroom.isPresent()) {
         maybeChatroom.get().removeClientSocket(socket);
@@ -131,14 +129,15 @@ public class ChatServerThread extends Thread implements Runnable {
       return getErrorMessage(1, "Invalid join request message. Please retry.");
     }
 
-    if (!server.clientNames.contains(clientName)) {
-      server.clientNames.add(clientName);
-    } else {
-      System.out.println("Client " + clientName + " already in chat system");
-      //return getErrorMessage(2, "Someone with your handle is already in the system. Please rejoin with another handle.");
+    synchronized (server.clientNames) {
+      if (!server.clientNames.contains(clientName)) {
+        server.clientNames.add(clientName);
+      } else {
+        System.out.println("Client " + clientName + " already in chat system");
+      }
     }
 
-    int joinId = createID();
+    int joinId = server.createID();
     int roomRef;
 
     Chatroom chatroom = new Chatroom();
@@ -147,7 +146,7 @@ public class ChatServerThread extends Thread implements Runnable {
         .findFirst();
 
     if (!maybeChatroom.isPresent()) {
-      roomRef = createID();
+      roomRef = server.createID();
       chatroom.setName(chatroomName);
       chatroom.setRoomRef(roomRef);
       chatroom.setPort(PORT);
@@ -190,9 +189,12 @@ public class ChatServerThread extends Thread implements Runnable {
         .put("CLIENT_NAME", clientName)
         .put("MESSAGE", message);
 
-    Optional<Chatroom> maybeChatroom = server.chatrooms.stream()
-        .filter(chatroom -> chatroom.getRoomRef() == roomRef)
-        .findFirst();
+    Optional<Chatroom> maybeChatroom;
+    synchronized (server.chatrooms) {
+       maybeChatroom = server.chatrooms.stream()
+          .filter(chatroom -> chatroom.getRoomRef() == roomRef)
+          .findFirst();
+    }
 
     if (maybeChatroom.isPresent()) {
       Chatroom chatroom = maybeChatroom.get();
