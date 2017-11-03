@@ -26,7 +26,6 @@ public class ChatServerThread extends Thread implements Runnable {
 
   public void run() {
     System.out.println("Server Thread " + PORT + " running.");
-    System.out.println("Begin Comms");
     openComms();
 
     while (true) {
@@ -233,7 +232,7 @@ public class ChatServerThread extends Thread implements Runnable {
       for (Socket clientSocketInChatroom : chatroom.getClientSockets()) {
         try {
           outToClient = new DataOutputStream(clientSocketInChatroom.getOutputStream());
-          outToClient.writeBytes(chatMessageResponse.toString());
+          outToClient.writeBytes(chatMessageResponse.toString() + "\n\n");
         } catch (IOException e) {
           System.out.println("Could not connect to socket: " + e);
         }
