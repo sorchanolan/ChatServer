@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class ChatServerThread extends Thread implements Runnable {
+  private volatile boolean running = true;
   private Socket socket = null;
   private ChatServer server = null;
   private int PORT = -1;
@@ -29,7 +30,7 @@ public class ChatServerThread extends Thread implements Runnable {
     System.out.println("Server Thread " + PORT + " running.");
     openComms();
 
-    while (true) {
+    while (running) {
       try {
         String clientMessage = inFromClient.readLine();
         System.out.println(clientMessage);
@@ -74,6 +75,8 @@ public class ChatServerThread extends Thread implements Runnable {
       socket.close();
     if (inFromClient != null)
       inFromClient.close();
+
+    running = false;
   }
 
   private void sendHeloMessage() {
