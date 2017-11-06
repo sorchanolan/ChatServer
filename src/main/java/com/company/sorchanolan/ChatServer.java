@@ -5,7 +5,6 @@ import java.net.*;
 import java.util.*;
 
 class ChatServer implements Runnable {
-  private static int PORT = 6789;
   private Thread thread = null;
   private ServerSocket welcomeSocket = null;
   private ChatServerThread client = null;
@@ -29,7 +28,8 @@ class ChatServer implements Runnable {
   }
 
   public static void main(String argv[]) throws Exception {
-    new ChatServer(PORT);
+    int port = Integer.parseInt(argv[0]);
+    new ChatServer(port);
   }
 
   @Override

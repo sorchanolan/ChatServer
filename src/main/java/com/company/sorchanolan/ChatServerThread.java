@@ -1,15 +1,17 @@
 package com.company.sorchanolan;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.json.*;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class ChatServerThread extends Thread implements Runnable {
+  private volatile boolean running = true;
   private Socket socket = null;
   private ChatServer server = null;
   private int PORT = -1;
@@ -28,7 +30,7 @@ public class ChatServerThread extends Thread implements Runnable {
     System.out.println("Server Thread " + PORT + " running.");
     openComms();
 
-    while (true) {
+    while (running) {
       try {
         String clientMessage = inFromClient.readLine();
         System.out.println(clientMessage);
@@ -49,6 +51,13 @@ public class ChatServerThread extends Thread implements Runnable {
   }
 
   private void processRequest(String clientMessage) {
+    if (clientMessage.equals("KILL_SERVICE\n")) {
+      System.exit(0);
+    } else if (clientMessage.equals("HELO text\n")) {
+      sendHeloMessage();
+      return;
+    }
+
     JSONObject requestMessage = new JSONObject(clientMessage);
     if (requestMessage.has("JOIN_CHATROOM")) {
       processJoinRequest(requestMessage);
@@ -66,6 +75,25 @@ public class ChatServerThread extends Thread implements Runnable {
       socket.close();
     if (inFromClient != null)
       inFromClient.close();
+
+    running = false;
+  }
+
+  private void sendHeloMessage() {
+    String ipAddress;
+    try {
+      ipAddress = InetAddress.getLocalHost().toString();
+    } catch (UnknownHostException e) {
+      System.out.println(e);
+      return;
+    }
+    String response = "HELO text\nIP:" + ipAddress + "\nPort:" + PORT + "\nStudentID:13317836\n";
+    System.out.println(response);
+    try {
+      outToClient.writeBytes(response + "\n");
+    } catch (IOException e) {
+      System.out.println(e);
+    }
   }
 
   private void processDisconnectRequest(JSONObject disconnectRequest) {
